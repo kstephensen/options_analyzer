@@ -1,4 +1,4 @@
-import consumer_key
+import Constants.consumer_key as consumer_key
 
 CONSUMER_KEY = consumer_key.CONSUMER_KEY
 

@@ -3,10 +3,10 @@ import json
 import numpy as np
 import datetime
 import pandas as pd
-import constants
+import Constants.constants as constants
 
 ## To-Do:
-# Add method to check if the market is open
+# Add method to checqk if the market is open
 # Add method to get how much money is in my account -> recommend actions off of that amount
 # Refresh my account
 # Add ability to add or remove from my watchlist
