@@ -9,3 +9,5 @@ THRESHOLD_PERCENT_GAIN = 0.8
 THRESHOLD_PREMIUM_GAIN = 15
 # How many years back do we want to get data for standard deviation
 YEARS_BACK_HISTORICAL = 3
+# What period do we want to calculate standard deviation? (in days)
+STANDARD_DEVIATION_PERIOD = 5

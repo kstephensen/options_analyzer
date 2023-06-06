@@ -49,6 +49,7 @@ def main():
             option = input("Select an option > ")
         
         if option.lower() != "q":
+            print()
             APP_ACTIONS[option]["function"]()
         else: 
             print("Thank you!")

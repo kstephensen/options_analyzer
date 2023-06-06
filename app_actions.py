@@ -1,54 +1,62 @@
 from td_ameritrade_calls import *
 import numpy as np
 import pandas as pd
+import time
+from tqdm import tqdm
 
+###### Helpers ######
 def get_watchlist():
     with open("watchlist.txt", "r") as file:
         watchlist = [line.rstrip() for line in file]
     return watchlist
 
-# Evaluators
-def eval_downdays(watchlist):
+def get_std_dev(asset):
+    # Get the standard deviation by week for the asset
+    # for the last 3 years
+    historicals = pd.DataFrame(getHistoricals(asset))
+    # historicals['date'] = pd.to_datetime(historicals.datetime, unit='ms').dt.date
+
+    period = constants.STANDARD_DEVIATION_PERIOD
+    closing_prices = historicals['close'].to_numpy()
+
+    # Use array broadcasting rather than brute force
+    returns = closing_prices[period:] - closing_prices[:-period]
+    return np.std(returns)
+
+## Context:
+# {'asset': {'price': XX,
+#            'netChange': XX}}
+def get_watchlist_down_days():
+    print("Getting Watchlist Subset...")
+    watchlist = get_watchlist()
     ## Who is down
     # Need to stringify our watchlist
     tickers = str(watchlist)[1:-1].replace("'", "").replace(" ", "")
-    # get quotes
+    # get quotes (only one API call)
     quotes = getQuotes(tickers)
     # see who all is down today
     downDays = {}
-    for asset in quotes.keys():
+    for asset in tqdm(quotes.keys()):
         if quotes[asset]["netPercentChangeInDouble"] < constants.THRESHOLD_DOWN_DAY:
             downDays[asset] = {"price": quotes[asset]["lastPrice"],
-                               "netChange": quotes[asset]["netPercentChangeInDouble"]}
+                               "netChange": quotes[asset]["netPercentChangeInDouble"],
+                               'stdDev': get_std_dev(asset)
+                               }
     return downDays
-
-def get_std_dev(asset):
-    # Get the standard deviation by week for the asset
-    # for the last 2 years
-
-    historicals = getHistoricals(asset)
-
-    returns = []
-
-    for day in range(1, len(historicals.close)):
-        day_return = historicals.close[day] - historicals.close[day-1]
-        returns.append(day_return)
-    
-    return np.std(returns)
 
 def eval_options_actions(actions, asset_prices):
     # Evaluate options_actions 
     # get std_deviations
-    asset_std_devs = {}
-    for asset in asset_prices.keys():
-        asset_std_devs[asset] = get_std_dev(asset)
+    # asset_std_devs = {}
+    # for asset in asset_prices.keys():
+    #     asset_std_devs[asset] = get_std_dev(asset)
 
     action_stds = []
     action_pos = []
     cur_prices = []
     for index, action in actions.iterrows():
         cur_asset = action["Ticker"]
-        cur_std_dev = asset_std_devs[cur_asset]
+        cur_std_dev = asset_prices[cur_asset]['stdDev']
         cur_strike = action["Strike Price"]
         cur_price = asset_prices[cur_asset]["price"]
 
@@ -69,14 +77,15 @@ def eval_options_actions(actions, asset_prices):
 
     print(actions.sort_values(by=["Exp Date", "Pos", "Percent Return"], ascending = False).to_string())
 
-
+# Takes in an array of tickers
 def get_options_actions(assets):
     # We need to get a list of all possible trades that gets us at 
     ## Strategy - 
     ### Pick trades that produce at least a 1% return
     ### Strike that is at least one std dev away (two is better)
     ### Only looking at weeklies
-
+    print()
+    print("Getting Options...")
     options_actions = pd.DataFrame({'Ticker': [],
                                     'Strike Price' : [],
                                     'Premium': [],
@@ -84,7 +93,7 @@ def get_options_actions(assets):
                                     'Exp Date' : []
                                      })
 
-    for asset in assets:
+    for asset in tqdm(assets):
         ## Get options contracts
         contract_map = getOptionsContracts(asset)
         
@@ -100,18 +109,18 @@ def get_options_actions(assets):
                         options_actions.loc[len(options_actions.index)] = [asset, strike_price, premium, perc_return, expiration_date]
     return options_actions
 
-
-
 ###### APP Actions #####
 # This could probably be broken down more
 def get_actions():
-    watchlist = get_watchlist()
     # Get dictionary of current down day stocks and their current prices
-    downDayWatchlist = eval_downdays(watchlist)
-    print("These are all of the watchlist stocks down today: {}".format(list(downDayWatchlist.keys())))
+    downDayWatchlist = get_watchlist_down_days()
+    print()
+    print("Here are all of the watchlist stocks down today: {}".format(list(downDayWatchlist.keys())))
+    
     # evaluate this list by getting all options
     options_actions = get_options_actions(downDayWatchlist.keys())
-    
+    # We're essentially making three calls per asset
+
     if len(options_actions.index) != 0:
         print("\nPossible Actions:")
         eval_options_actions(options_actions, downDayWatchlist)

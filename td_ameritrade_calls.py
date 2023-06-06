@@ -1,10 +1,11 @@
 import requests
 import json
 import Constants.constants as constants
-import pandas as pd
 import datetime
 
 # Getters
+
+# Gets Quotes for a list of tickers, one API call
 def getQuotes(tickers):
     endpoint = "https://api.tdameritrade.com/v1/marketdata/quotes"
     page = requests.get(url=endpoint,
@@ -26,7 +27,7 @@ def getHistoricals(asset):
 
     historicals = json.loads(page.content)["candles"]
 
-    return pd.DataFrame(historicals)   
+    return historicals
 
 def getMarketHours(date):
     # Note: I can change to look at other markets ['EQUITY', 'OPTIONS', 'FUTURE', 'BOND', 'FOREX']
