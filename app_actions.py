@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import time
 from tqdm import tqdm
+import math
 
 ###### Helpers ######
 def get_watchlist():
@@ -10,18 +11,17 @@ def get_watchlist():
         watchlist = [line.rstrip() for line in file]
     return watchlist
 
-def get_std_dev(asset):
+def get_std_dev_and_mean(asset):
     # Get the standard deviation by week for the asset
     # for the last 3 years
     historicals = pd.DataFrame(getHistoricals(asset))
     # historicals['date'] = pd.to_datetime(historicals.datetime, unit='ms').dt.date
-
-    period = constants.STANDARD_DEVIATION_PERIOD
+    today = datetime.date.today()
+    period = 5 - today.weekday()
     closing_prices = historicals['close'].to_numpy()
-
     # Use array broadcasting rather than brute force
-    returns = closing_prices[period:] - closing_prices[:-period]
-    return np.std(returns)
+    returns = (closing_prices[1:] - closing_prices[:-1]) / closing_prices[:-1]
+    return [np.std(returns) * math.sqrt(period), np.mean(returns)]
 
 ## Context:
 # {'asset': {'price': XX,
@@ -38,9 +38,12 @@ def get_watchlist_down_days():
     downDays = {}
     for asset in tqdm(quotes.keys()):
         if quotes[asset]["netPercentChangeInDouble"] < constants.THRESHOLD_DOWN_DAY:
+            [std_dev, mean] = get_std_dev_and_mean(asset)
+
             downDays[asset] = {"price": quotes[asset]["lastPrice"],
                                "netChange": quotes[asset]["netPercentChangeInDouble"],
-                               'stdDev': get_std_dev(asset)
+                               'stdDev': std_dev,
+                               'mean': mean
                                }
     return downDays
 
@@ -54,27 +57,33 @@ def eval_options_actions(actions, asset_prices):
     action_stds = []
     action_pos = []
     cur_prices = []
+    current_price_strike_difference = []
+    # means = []
     for index, action in actions.iterrows():
         cur_asset = action["Ticker"]
         cur_std_dev = asset_prices[cur_asset]['stdDev']
         cur_strike = action["Strike Price"]
         cur_price = asset_prices[cur_asset]["price"]
-
+        cur_difference = cur_price - cur_strike
+        # cur_mean = asset_prices[cur_asset]["mean"]
         std_dev_pos = ""
-        if cur_strike < cur_price - cur_std_dev:
+        if cur_strike <= cur_price * (1 - cur_std_dev):
             std_dev_pos += "*"
-            if cur_strike < cur_price - 2 * cur_std_dev:
+            if cur_strike <= cur_price * (1 - 2 * cur_std_dev):
                 std_dev_pos += "*"
 
         action_stds.append(cur_std_dev)
         action_pos.append(std_dev_pos)
         cur_prices.append(cur_price)
+        current_price_strike_difference.append(cur_difference)
+        # means.append(cur_mean)
 
     actions["CurPrice"] = cur_prices
     actions["Std Dev"] = action_stds
+    actions["Difference"] = current_price_strike_difference
+    # actions["Mean"] = means
     actions["Pos"] = action_pos
     
-
     print(actions.sort_values(by=["Exp Date", "Pos", "Percent Return"], ascending = False).to_string())
 
 # Takes in an array of tickers
