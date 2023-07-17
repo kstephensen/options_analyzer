@@ -35,8 +35,7 @@ def getMarketHours(date):
     page = requests.get(url=endpoint,
                         params = {'apikey': constants.CONSUMER_KEY,
                                   'date': date})
-
-    return json.loads(page.content)['equity']['EQ'] 
+    return json.loads(page.content)['equity']['equity'] 
     
 def getOptionsContracts(asset):
     endpoint = "https://api.tdameritrade.com/v1/marketdata/chains"

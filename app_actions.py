@@ -17,7 +17,7 @@ def get_std_dev_and_mean(asset):
     historicals = pd.DataFrame(getHistoricals(asset))
     # historicals['date'] = pd.to_datetime(historicals.datetime, unit='ms').dt.date
     today = datetime.date.today()
-    period = 5 - today.weekday()
+    period = 4 - today.weekday() if today.weekday() < 5 else 0
     closing_prices = historicals['close'].to_numpy()
     # Use array broadcasting rather than brute force
     returns = (closing_prices[1:] - closing_prices[:-1]) / closing_prices[:-1]
@@ -84,7 +84,7 @@ def eval_options_actions(actions, asset_prices):
     # actions["Mean"] = means
     actions["Pos"] = action_pos
     
-    print(actions.sort_values(by=["Exp Date", "Pos", "Percent Return"], ascending = False).to_string())
+    print(actions.sort_values(by=["Exp Date", "Difference"], ascending = False).to_string())
 
 # Takes in an array of tickers
 def get_options_actions(assets):
