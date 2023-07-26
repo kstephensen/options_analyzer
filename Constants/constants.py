@@ -1,6 +1,6 @@
-import Constants.consumer_key as consumer_key
+import Constants.api_key as api_key
 
-CONSUMER_KEY = consumer_key.CONSUMER_KEY
+CONSUMER_KEY = api_key.CONSUMER_KEY
 
 THRESHOLD_DOWN_DAY = 0
 # Will only look at actions that give me a gain of 0.5% or more
