@@ -145,8 +145,11 @@ def get_asset_actions():
     asset = input("Asset to evaluate > ")
     quote = getQuotes(asset)
     
+    [std_dev, mean] = get_std_dev_and_mean(asset)
+
     asset_info = {}
     asset_info[asset] = {"price": quote[asset]["lastPrice"],
-                        "netChange": quote[asset]["netPercentChangeInDouble"]}
+                        "netChange": quote[asset]["netPercentChangeInDouble"],
+                        "stdDev": std_dev}
     actions = get_options_actions([asset])
     eval_options_actions(actions, asset_info)
